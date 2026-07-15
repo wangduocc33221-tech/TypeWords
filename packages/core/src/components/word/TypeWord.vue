@@ -767,366 +767,117 @@ defineExpose({
 </script>
 
 <template>
-  <div class="typing-word" ref="typingWordRef" v-if="word.word.length">
-    <div class="flex flex-col items-center">
-      <div class="flex gap-1 mt-10 md:mt-30">
-        <div
-          class="phonetic"
-          :class="
-            (settingStore.dictation ||
-              [WordPracticeType.Spell, WordPracticeType.Listen, WordPracticeType.Dictation].includes(
-                settingStore.wordPracticeType
-              )) &&
-            !showFullWord &&
-            !showWordResult &&
-            'word-shadow'
-          "
-          v-if="settingStore.soundType === 'uk' && word.phonetic0"
-        >
-          / {{ word.phonetic0 }} /
-        </div>
-        <div
-          class="phonetic"
-          :class="
-            (settingStore.dictation ||
-              [WordPracticeType.Spell, WordPracticeType.Listen, WordPracticeType.Dictation].includes(
-                settingStore.wordPracticeType
-              )) &&
-            !showFullWord &&
-            !showWordResult &&
-            'word-shadow'
-          "
-          v-if="settingStore.soundType === 'us' && word.phonetic1"
-        >
-          / {{ word.phonetic1 }} /
-        </div>
-        <VolumeIcon
-          :title="`发音(${settingStore.shortcutKeyMap[ShortcutKey.PlayWordPronunciation]})`"
-          ref="volumeIconRef"
-          :simple="true"
-          @click="onVolumeIconClick"
-        />
-      </div>
-
-      <Tooltip
-        :title="settingStore.dictation ? `快捷键 ${settingStore.shortcutKeyMap[ShortcutKey.ShowWord]} 显示单词` : ''"
-      >
-        <div
-          id="word"
-          class="word my-1"
-          :class="wrong && !isTypingSentence() ? 'is-wrong' : ''"
-          :style="{ fontSize: settingStore.fontSize.wordForeignFontSize + 'px' }"
-          @mouseenter="showWord"
-          @mouseleave="mouseleave"
-        >
-          <div v-if="settingStore.wordPracticeType === WordPracticeType.Dictation">
-            <div
-              class="letter text-align-center w-full inline-block"
-              v-opacity="!settingStore.dictation || showWordResult || showFullWord"
-            >
-              {{ word.word }}
-            </div>
-            <div
-              class="mt-2 w-120 dictation"
-              :style="{ minHeight: settingStore.fontSize.wordForeignFontSize + 'px' }"
-              :class="showWordResult ? (right ? 'right' : 'wrong') : ''"
-            >
-              <template v-for="i in input">
-                <span class="l" v-if="i !== ' '">{{ i }}</span>
-                <Space class="l" v-else :is-wrong="showWordResult ? !right : false" :is-wait="!showWordResult" />
-              </template>
-            </div>
-          </div>
-          <template v-else>
-            <div v-if="currentPracticeSentenceIndex === -1">
-              <span class="input" v-if="input">{{ input }}</span>
-              <span class="wrong" v-if="wrong">{{ wrong }}</span>
-              <span class="letter" v-if="settingStore.dictation && !showFullWord">
-                {{
-                  displayWord
-                    .split('')
-                    .map(v => (v === ' ' ? '&nbsp;' : '_'))
-                    .join('')
-                }}
-              </span>
-              <span class="letter" v-else>{{ displayWord }}</span>
-            </div>
-            <div v-else>
-              <span class="input">{{ word.word }}</span>
-            </div>
-          </template>
-        </div>
-      </Tooltip>
-
-      <!--      单词操作按钮-->
-      <div class="mt-2 flex gap-4">
-        <BaseIcon
-          @click="emit('toggleSimple')"
-          :title="
-            (!isSimple ? $t('mark_mastered') : $t('unmark_mastered')) +
-            `(${settingStore.shortcutKeyMap[ShortcutKey.ToggleSimple]})`
-          "
-        >
-          <IconFluentCheckmarkCircle16Regular v-if="!isSimple" />
-          <IconFluentCheckmarkCircle16Filled v-else />
-        </BaseIcon>
-        <BaseIcon @click="editNote" :title="editingNote ? '完成编辑笔记' : '编辑笔记'">
-          <IconFluentClipboardTextEdit20Regular />
-        </BaseIcon>
-        <span ref="collectAnchorRef" class="inline-flex">
-          <BaseIcon
-            class="word-collect-anchor"
-            @click="openCollectPicker"
-            :title="`${$t('collect_to_dict')}(${settingStore.shortcutKeyMap[ShortcutKey.ToggleCollect]})`"
-          >
-            <IconFluentStarAdd16Regular />
-          </BaseIcon>
-        </span>
-        <BaseIcon @click="emit('skip')" :title="`${$t('skip_word')}(${settingStore.shortcutKeyMap[ShortcutKey.Next]})`">
-          <IconFluentArrowBounce20Regular class="transform-rotate-180" />
-        </BaseIcon>
-      </div>
-
-      <div class="mt-4 flex gap-2" v-if="isSelfAssessment && !showWordResult">
-        <BaseButton
-          :keyboard="`${$t('shortcut')}(${settingStore.shortcutKeyMap[ShortcutKey.KnowWord]})`"
-          size="large"
-          @click="know"
-          >{{ $t('i_know') }}
-        </BaseButton>
-        <BaseButton
-          :keyboard="`${$t('shortcut')}(${settingStore.shortcutKeyMap[ShortcutKey.UnknownWord]})`"
-          size="large"
-          @click="unknown"
-          >{{ $t('i_dont_know') }}
-        </BaseButton>
-        <BaseButton
-          :keyboard="`${$t('shortcut')}(${settingStore.shortcutKeyMap[ShortcutKey.MasteredWord]})`"
-          size="large"
-          @click="mastered"
-          >已掌握
-        </BaseButton>
-      </div>
-
-      <div v-if="isWordTest && !showWordResult" class="flex gap-8 flex-col my-8 w-full">
-        <div
-          v-for="(value, index) in question?.candidates ?? []"
-          class="flex gap-2 min-h-20"
-          :class="{
-            'text-green-600': completeSelect && index === props?.question?.correctIndex,
-            'text-red-600': completeSelect && index !== props?.question?.correctIndex && index === selectIndex,
-          }"
-        >
-          <BaseButton
-            :keyboard="`${$t('shortcut')}(${settingStore.shortcutKeyMap[[ShortcutKey.ChooseA, ShortcutKey.ChooseB, ShortcutKey.ChooseC, ShortcutKey.ChooseD][index]]})`"
-            @click="e => select(e, index)"
-          >
-            {{ ['A', 'B', 'C', 'D'][index] }}
-          </BaseButton>
-          <span class="ml-2">
-            <div class="min-h-10 text-2xl" :class="{ 'word-shadow': !showAllCandidates && !completeSelect }">
-              {{ value.word.word }}
-            </div>
-            <TranslationList :word="value.word" :showFull="showAllCandidates || completeSelect" />
-          </span>
-        </div>
-      </div>
-
-      <div class="center mt-3" v-if="notice.show && settingStore.showUsageTips">
-        <ToastComponent
-          :duration="0"
-          confirm
-          :shadow="false"
-          :showClose="store.sdict.statistics.length > 2"
-          :message="notice.text"
-          @close="settingStore.showUsageTips = false"
-        />
-      </div>
-
-      <div
-        class="translate flex flex-col gap-2 my-3"
-        v-opacity="settingStore.translate || showWordResult || showFullWord"
-        :style="{
-          fontSize: settingStore.fontSize.wordTranslateFontSize + 'px',
-        }"
-      >
-        <TranslationList :word="word" :showFull="!settingStore.dictation || showWordResult || showFullWord" />
-      </div>
-    </div>
-
-    <template v-if="editingNote || store.noteData[word.word]?.trim()">
-      <div class="line-white my-3"></div>
-      <div class="flex flex-col gap-2">
-        <div class="flex">
-          <div class="label">笔记</div>
-          <Textarea
-            autofocus
-            v-if="editingNote"
-            v-model="noteInputValue"
-            placeholder="记录这个单词的个人笔记"
-            :autosize="{ minRows: 4, maxRows: 8 }"
-            class="note-textarea"
-          />
-          <div v-else class="note-content">{{ store.noteData[word.word] }}</div>
-        </div>
-        <div v-if="editingNote" class="flex justify-end mt-2">
-          <BaseButton size="large" type="info" v-if="store.noteData[word.word]" @click="deleteNote">删除</BaseButton>
-          <BaseButton size="large" @click="cancelNote">取消</BaseButton>
-          <BaseButton size="large" type="primary" @click="saveNote">保存</BaseButton>
-        </div>
-      </div>
-    </template>
-
-    <div
-      class="other anim"
-      v-opacity="
-        ![WordPracticeType.Listen, WordPracticeType.Dictation, WordPracticeType.Identify].includes(
-          settingStore.wordPracticeType
-        ) ||
-        showFullWord ||
-        showWordResult
-      "
-    >
-      <template v-if="word?.sentences?.length">
-        <div class="line-white my-3"></div>
-        <div
-          class="sentence"
-          :class="{
-            'is-wrong': wrong && currentPracticeSentenceIndex === index,
-            'sentence-highlight': highlightedSentenceIndex === index,
-          }"
-          v-for="(item, index) in word.sentences"
-          :key="index"
-        >
-          <div class="flex gap-space text-xl">
-            <div v-if="index !== currentPracticeSentenceIndex">
-              <ClickableEnglishText
-                :text="item.c"
-                :word="word.word"
-                :dictation="!(!settingStore.dictation || showFullWord || showWordResult)"
-              />
-            </div>
-            <div v-else>
-              <span class="input" v-if="input">{{ input }}</span>
-              <span class="wrong" v-if="wrong">{{ wrong }}</span>
-              <span class="letter">{{ displaySentence }}</span>
-            </div>
-            <VolumeIcon
-              :title="getSentenceShortcut(index) ? `发音(${getSentenceShortcut(index)})` : '发音'"
-              :simple="false"
-              @click.stop="() => playSentence(index)"
-              ref="sentenceVolumeIconsRefs"
-            />
-          </div>
-          <div class="text-base anim" v-opacity="settingStore.translate || showFullWord || showWordResult">
-            {{ item.cn }}
-          </div>
-        </div>
-      </template>
-
-      <template v-if="word?.phrases?.length">
-        <div class="line-white my-3"></div>
-        <div class="flex">
-          <div class="label">{{ $t('phrases') }}</div>
-          <div class="flex flex-col">
-            <div class="flex items-center gap-4" v-for="(item, index) in word.phrases" :key="index">
-              <div class="flex gap-space items-center">
-                <ClickableEnglishText
-                  class="en"
-                  :text="item.c"
-                  :word="word.word"
-                  :dictation="!(!settingStore.dictation || showFullWord || showWordResult)"
-                />
-                <VolumeIcon :simple="false" title="发音" @click.stop="() => playTtsWithGuide(item.c)" />
-              </div>
-              <div class="cn anim" v-opacity="settingStore.translate || showFullWord || showWordResult">
-                {{ item.cn }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </template>
-
-      <template v-if="settingStore.translate || !settingStore.dictation">
-        <template v-if="word?.synos?.length">
-          <div class="line-white my-3"></div>
-          <div class="flex">
-            <div class="label">{{ $t('synonyms') }}</div>
-            <div class="flex flex-col gap-3">
-              <div class="flex" v-for="item in word.synos">
-                <div class="pos line-height-1.4rem!">{{ item.pos }}</div>
-                <div>
-                  <div class="cn anim" v-opacity="settingStore.translate || showFullWord || showWordResult">
-                    {{ item.cn }}
-                  </div>
-                  <div class="anim" v-opacity="!settingStore.dictation || showFullWord || showWordResult">
-                    <template v-for="(i, j) in item.ws" :key="j">
-                      <ClickableWord :word="i" />
-                      <span v-if="j !== item.ws.length - 1"> / </span>
-                    </template>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </template>
-      </template>
-
-      <div
-        class="anim"
-        v-opacity="
-          ((settingStore.translate && !settingStore.dictation) || showFullWord || showWordResult) &&
-          settingStore.showEtymologyAndRelWords
-        "
-      >
-        <template v-if="word?.etymology?.length">
-          <div class="line-white my-3"></div>
-          <div class="flex">
-            <div class="label">{{ $t('etymology') }}</div>
-            <div class="text-base">
-              <div class="mb-2" v-for="item in word.etymology">
-                <div class="">{{ item.t }}</div>
-                <div class="">{{ item.d }}</div>
-              </div>
-            </div>
-          </div>
-          <!--        <div class="line-white my-2"></div>-->
-        </template>
-
-        <template v-if="word?.relWords?.root">
-          <div class="flex">
-            <div class="label">{{ $t('related_words') }}</div>
-            <div class="flex flex-col gap-3">
-              <div v-if="word.relWords.root" class=" ">
-                {{ $t('word_root') }}：<ClickableWord class="en" :word="word.relWords.root" />
-              </div>
-              <div class="flex" v-for="item in word.relWords.rels">
-                <div class="pos">{{ item.pos }}</div>
-                <div>
-                  <div class="flex items-center gap-4" v-for="itemj in item.words">
-                    <ClickableWord class="en" :word="itemj.c" />
-                    <div class="cn">{{ itemj.cn }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </template>
-      </div>
-    </div>
-    <div
-      v-if="!editingNote"
-      class="cursor"
-      :style="{
-        top: cursor.top + 'px',
-        left: cursor.left + 'px',
-        height: isTypingSentence() ? '20px' : settingStore.fontSize.wordForeignFontSize + 'px',
-      }"
-    ></div>
-    <WordLookupPopover />
+  <!-- 模式1：图片认词卡 -->
+<div v-if="settingStore.wordPracticeType === WordPracticeType.ImageCard" class="image-card-mode">
+  <!-- 单词图片 -->
+  <img 
+    :src="word.image || 'https://picsum.photos/seed/'+word.word+'/400/300'" 
+    class="word-image"
+    style="width: 300px; height: 220px; border-radius: 12px; object-fit: cover; margin: 0 auto 20px;"
+  >
+  <!-- 单词+音标 -->
+  <div class="word-text text-4xl font-bold mb-2">{{ word.word }}</div>
+  <div class="phonetic text-gray-500 mb-4">/{{ word.phonetic }}/</div>
+  <!-- 例句 -->
+  <div class="sentence text-lg text-gray-700 mb-6" v-if="word.sentences?.[0]">
+    {{ word.sentences[0].c }}
   </div>
-</template>
-
+  <!-- 下一个按钮 -->
+  <BaseButton type="primary" @click="emit('complete')">认识了，下一个</BaseButton>
+</div>
+<template>
+  <!-- 模式2：听音写词 -->
+<div v-if="settingStore.wordPracticeType === WordPracticeType.ImageListen" class="image-listen-mode">
+  <!-- 可点击发音的图片 -->
+  <div 
+    class="clickable-image cursor-pointer hover:opacity-80 transition"
+    @click="playWord()"
+    style="width: 300px; height: 220px; border-radius: 12px; background: #f5f5f5; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;"
+  >
+    <img 
+      :src="word.image || 'https://picsum.photos/seed/'+word.word+'/400/300'" 
+      style="width: 100%; height: 100%; border-radius: 12px; object-fit: cover;"
+    >
+    <div class="play-tip absolute text-white text-lg bg-black/50 px-4 py-2 rounded-full">点击发音 🔊</div>
+  </div>
+  <!-- 输入框 -->
+  <input 
+    v-model="input" 
+    class="word-input w-80 text-2xl text-center border-b-2 border-gray-300 outline-none py-2 mb-4"
+    placeholder="输入听到的单词"
+    @keyup.enter="checkListenAnswer"
+  >
+  <!-- 确认按钮 -->
+  <BaseButton type="primary" @click="checkListenAnswer">确认</BaseButton>
+</div>
+  // 模式2 校验听写答案
+function checkListenAnswer() {
+  if (input.trim().toLowerCase() === props.word.word.toLowerCase()) {
+    playCorrect()
+    emit('complete')
+  } else {
+    wrong = input
+    wrongTimes.value++
+    Toast.error('拼写错误，再试一次')
+  }
+}
+  <template>
+    <!-- 模式3：例句释义选择 -->
+<div v-if="settingStore.wordPracticeType === WordPracticeType.SentenceChoice" class="sentence-choice-mode">
+  <!-- 例句 -->
+  <div class="sentence text-xl mb-8 text-center" v-if="word.sentences?.[0]">
+    {{ word.sentences[0].c }}
+  </div>
+  <!-- 4个选项 -->
+  <div class="options grid grid-cols-1 gap-3 w-96 mx-auto">
+    <button 
+      v-for="(opt, idx) in question.candidates" 
+      :key="idx"
+      class="option-btn py-3 px-4 border rounded-lg hover:border-blue-500 hover:bg-blue-50 transition text-left"
+      @click="checkChoiceAnswer(idx)"
+    >
+      {{ String.fromCharCode(65+idx) }}. {{ opt.word.paraphrase || opt.word.trans[0]?.cn }}
+    </button>
+  </div>
+</div>
+    // 模式3 校验选择题答案
+function checkChoiceAnswer(idx: number) {
+  if (idx === question?.correctIndex) {
+    playCorrect()
+    emit('complete')
+  } else {
+    wrongTimes.value++
+    Toast.error('选错了，再试试')
+  }
+}
+<template>
+  <!-- 模式4：例句翻译 -->
+<div v-if="settingStore.wordPracticeType === WordPracticeType.SentenceTrans" class="sentence-trans-mode">
+  <!-- 例句 -->
+  <div class="sentence text-xl mb-6 text-center" v-if="word.sentences?.[0]">
+    {{ word.sentences[0].c }}
+  </div>
+  <!-- 中文输入框 -->
+  <textarea 
+    v-model="input" 
+    class="trans-input w-96 h-32 border rounded-lg p-3 text-lg outline-none focus:border-blue-500 mb-4 block mx-auto"
+    placeholder="输入这句话的中文意思"
+  ></textarea>
+  <div class="flex gap-3 justify-center">
+    <BaseButton @click="showAnswer = true">显示答案</BaseButton>
+    <BaseButton type="primary" @click="emit('complete')">完成</BaseButton>
+  </div>
+  <!-- 答案显示 -->
+  <div v-if="showAnswer" class="answer mt-4 text-green-600 text-center">
+    正确翻译：{{ word.sentenceCn || word.trans[0]?.cn }}
+  </div>
+</div>
+  let showAnswer = ref(false)
+// 切换单词的时候重置答案显示
+watch(() => props.word, () => {
+  showAnswer.value = false
+  // 原来的reset逻辑保留
+})
 <style scoped lang="scss">
 .dictation {
   border-bottom: 2px solid gray;
