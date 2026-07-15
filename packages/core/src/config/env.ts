@@ -171,12 +171,10 @@ export const WordPracticeModeStageMap: Record<WordPracticeMode, WordPracticeStag
     WordPracticeStage.Complete,
   ],
   [WordPracticeMode.System]: [
-    WordPracticeStage.FollowWriteNewWord,
-    WordPracticeStage.ListenNewWord,
-    WordPracticeStage.DictationNewWord,
-    WordPracticeStage.IdentifyReview,
-    WordPracticeStage.ListenReview,
-    WordPracticeStage.DictationReview,
+     WordPracticeStage.ImageCardNewWord,
+    WordPracticeStage.ImageListenNewWord,
+    WordPracticeStage.SentenceChoiceNewWord,
+    WordPracticeStage.SentenceTransNewWord,
     WordPracticeStage.Complete,
   ],
   [WordPracticeMode.Shuffle]: [WordPracticeStage.Shuffle, WordPracticeStage.Complete],
@@ -190,16 +188,11 @@ export const WordPracticeModeStageMap: Record<WordPracticeMode, WordPracticeStag
   [WordPracticeMode.ReviewWordsTest]: null,
 }
 export const WordPracticeStageNameMap: Record<WordPracticeStage, string> = {
-  [WordPracticeStage.FollowWriteNewWord]: '跟写新词',
-  [WordPracticeStage.IdentifyNewWord]: '自测新词',
-  [WordPracticeStage.ListenNewWord]: '听写新词',
-  [WordPracticeStage.DictationNewWord]: '默写新词',
-  [WordPracticeStage.FollowWriteReview]: '跟写旧词',
-  [WordPracticeStage.IdentifyReview]: '自测旧词',
-  [WordPracticeStage.ListenReview]: '听写旧词',
-  [WordPracticeStage.DictationReview]: '默写旧词',
+  [WordPracticeStage.ImageCardNewWord]: '图片认词',
+  [WordPracticeStage.ImageListenNewWord]: '听音写词',
+  [WordPracticeStage.SentenceChoiceNewWord]: '释义选择',
+  [WordPracticeStage.SentenceTransNewWord]: '例句翻译',
   [WordPracticeStage.Complete]: '完成学习',
-  [WordPracticeStage.Shuffle]: '随机复习',
 }
 export const WordPracticeModeNameMap: Record<WordPracticeMode, string> = {
   [WordPracticeMode.System]: '学习',
