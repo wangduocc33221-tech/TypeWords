@@ -89,11 +89,10 @@ export enum WordPracticeMode {
 
 //练习类型
 export enum WordPracticeType {
-  FollowWrite, //跟写
-  Spell,
-  Identify,
-  Listen,
-  Dictation,
+  ImageCard,      // 模式1：图片+单词+例句 认词卡
+  ImageListen,    // 模式2：点图发音 听写单词
+  SentenceChoice, // 模式3：例句4选1 选paraphrase
+  SentenceTrans,  // 模式4：给例句 写汉语意思
 }
 
 export enum CodeType {
@@ -113,18 +112,11 @@ export enum ImportStatus {
 
 //练习阶段
 export enum WordPracticeStage {
-  FollowWriteNewWord = 0,
-  IdentifyNewWord = 1,
-  ListenNewWord = 2,
-  DictationNewWord = 3,
-
-  FollowWriteReview = 4,
-  IdentifyReview = 5,
-  ListenReview = 6,
-  DictationReview = 7,
-
-  Shuffle = 12,
-  Complete = 13,
+   ImageCardNewWord = 0,    // 模式1 认词
+  ImageListenNewWord = 1,  // 模式2 听音写词
+  SentenceChoiceNewWord = 2, // 模式3 选释义
+  SentenceTransNewWord = 3,  // 模式4 写翻译
+  Complete = 13, // 保留完成阶段
 }
 
 // 自测方法
