@@ -41,6 +41,9 @@ export type Word = {
     t: string //title
     d: string //desc
   }[]
+ image?: string; // 新增：单词对应图片URL（可以是本地/在线地址）
+  paraphrase?: string; // 新增：例句的英文paraphrase（模式3正确选项）
+  sentenceCn?: string; // 新增：例句的标准中文翻译（模式4答案）
 }
 
 export type TranslateLanguageType = 'en' | 'zh-CN' | 'ja' | 'de' | 'common' | ''
