@@ -343,17 +343,18 @@ async function initData(initVal?: TaskWords, init: boolean = false) {
       if (taskWords.new.length === 0) {
         if (taskWords.review.length) {
           data = getDefaultPracticeData(data, { words: taskWords.review })
-          if (settingStore.wordPracticeMode === WordPracticeMode.System) {
-            statStore.stage = WordPracticeStage.IdentifyReview
-          } else if (settingStore.wordPracticeMode === WordPracticeMode.Free) {
-            statStore.stage = WordPracticeModeStageMap[settingStore.wordPracticeMode][0]
-          } else if (settingStore.wordPracticeMode === WordPracticeMode.IdentifyOnly) {
-            statStore.stage = WordPracticeStage.IdentifyReview
-          } else if (settingStore.wordPracticeMode === WordPracticeMode.DictationOnly) {
-            statStore.stage = WordPracticeStage.DictationReview
-          } else if (settingStore.wordPracticeMode === WordPracticeMode.ListenOnly) {
-            statStore.stage = WordPracticeStage.ListenReview
-          }
+         if (settingStore.wordPracticeMode === WordPracticeMode.System) {
+  // 4个模式按顺序走：图片认词→听音写词→释义选择→例句翻译→完成
+  if (statStore.stage === WordPracticeStage.ImageCardNewWord) {
+    nextStage(shuffle(taskWords.new), '开始听音写词', true)
+  } else if (statStore.stage === WordPracticeStage.ImageListenNewWord) {
+    nextStage(shuffle(taskWords.new), '开始释义选择')
+  } else if (statStore.stage === WordPracticeStage.SentenceChoiceNewWord) {
+    nextStage(shuffle(taskWords.new), '开始例句翻译')
+  } else if (statStore.stage === WordPracticeStage.SentenceTransNewWord) {
+    complete()
+  }
+}
         } else {
           Toast.warning('没有可学习的单词！')
           router.push('/words')
@@ -431,6 +432,18 @@ function watchStage(n: WordPracticeStage) {
     case WordPracticeStage.IdentifyNewWord:
     case WordPracticeStage.IdentifyReview:
       settingStore.wordPracticeType = WordPracticeType.Identify
+      break
+       case WordPracticeStage.ImageCardNewWord:
+      settingStore.wordPracticeType = WordPracticeType.ImageCard
+      break
+    case WordPracticeStage.ImageListenNewWord:
+      settingStore.wordPracticeType = WordPracticeType.ImageListen
+      break
+    case WordPracticeStage.SentenceChoiceNewWord:
+      settingStore.wordPracticeType = WordPracticeType.SentenceChoice
+      break
+    case WordPracticeStage.SentenceTransNewWord:
+      settingStore.wordPracticeType = WordPracticeType.SentenceTrans
       break
   }
 }
