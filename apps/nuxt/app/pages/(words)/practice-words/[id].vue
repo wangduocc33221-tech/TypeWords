@@ -52,7 +52,7 @@ import ConflictNotice2 from '@typewords/core/components/dialog/ConflictNotice2.v
 import { createEmptyCard, Rating } from 'ts-fsrs'
 import { useGetGradeByWrongTimes, useNextCard } from '@typewords/core/hooks/fsrs.ts'
 import WordMarkPickList, { type WordMarkPickResult } from '@typewords/core/components/word/WordMarkPickList.vue'
-import { buildQuestion } from '@typewords/core/utils/word-test.ts'
+import { buildQuestion, buildParaphraseQuestion } from '@typewords/core/utils/word-test.ts'
 import CollectNotice from '@typewords/core/components/dialog/CollectNotice.vue'
 
 const { isWordSimple, toggleWordSimple } = useWordOptions()
@@ -123,7 +123,13 @@ watch(
 
 function updateQuestion() {
   if (data.words?.[data.index]) {
-    data.question = buildQuestion(data.words[data.index], allWords)
+    const currentWord = data.words[data.index]
+    // 模式3（释义选择）用新的paraphrase出题，其他模式用原来的
+    if (statStore.stage === WordPracticeStage.SentenceChoiceNewWord) {
+      data.question = buildParaphraseQuestion(currentWord, allWords)
+    } else {
+      data.question = buildQuestion(currentWord, allWords)
+    }
   }
 }
 
