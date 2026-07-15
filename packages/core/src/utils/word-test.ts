@@ -109,3 +109,48 @@ export function buildQuestion(word: Word, list: Word[], maxCount: number = 4): Q
         correctIndex,
     }
 }
+/**
+ * 模式3专用：给例句生成4选1 paraphrase题目
+ * @param word 当前单词
+ * @param list 当前词表所有单词（用来抽干扰项）
+ * @param maxCount 选项数量，默认4个
+ */
+export function buildParaphraseQuestion(word: Word, list: Word[], maxCount: number = 4): Question {
+  // 1. 确定正确答案：优先用你加的paraphrase英文释义，没有就兜底用第一个中文释义
+  const correctText = word.paraphrase || word.trans[0]?.cn || ''
+  // 用来存已经用过的选项文本，避免重复
+  const usedTexts = new Set([correctText])
+  const candidates: Candidate[] = [{ word, similarity: Infinity }]
+
+  // 2. 遍历词表，复用原来的相似度逻辑，抽最相似的3个干扰项
+  const similarityList: { word: Word; similarity: number }[] = []
+  for (let i = 0; i < list.length; i++) {
+    const item = list[i]
+    // 跳过当前单词本身
+    if (item.word.toLowerCase() === word.word.toLowerCase()) continue
+    // 取当前干扰项的文本：优先paraphrase，没有就用中文释义
+    const itemText = item.paraphrase || item.trans[0]?.cn || ''
+    // 跳过空文本、重复文本
+    if (!itemText || usedTexts.has(itemText)) continue
+    // 复用原来的相似度计算，选最容易混淆的释义当干扰项
+    const similarity = calSimilarity(word, item)
+    similarityList.push({ word: item, similarity })
+  }
+
+  // 3. 取相似度最高的3个当干扰项
+  similarityList.sort((a, b) => b.similarity - a.similarity)
+  const wrongCandidates = similarityList.slice(0, maxCount - 1)
+  wrongCandidates.forEach(c => {
+    const text = c.word.paraphrase || c.word.trans[0]?.cn
+    usedTexts.add(text)
+    candidates.push(c)
+  })
+
+  // 4. 打乱选项顺序，返回和原来完全一样的Question结构，不用改类型
+  const shuffledCandidates = shuffle(candidates)
+  const correctIndex = shuffledCandidates.findIndex(c => c.word === word)
+  return {
+    candidates: shuffledCandidates,
+    correctIndex
+  }
+}
